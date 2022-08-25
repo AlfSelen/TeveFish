@@ -1,3 +1,4 @@
 keyboard~=0.13.5
-Pillow~=9.2.0
-PyAutoGUI~=0.9.53
+Pillow~=9.1.1
+PyAutoGUI~=0.9.48
+imagehash~=4.2.1

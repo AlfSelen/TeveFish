@@ -77,7 +77,7 @@ def full_inventory(slots):
     threshold = 20
     full_inv = False
     for slot in slots:
-        if
+        pass
     return full_inv
 
 def capture_hero(img) -> bool:
