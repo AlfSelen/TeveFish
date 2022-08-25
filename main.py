@@ -5,11 +5,11 @@ from settings import *
 from time import sleep, time
 from datetime import datetime
 import keyboard
-from custom_func import im_to_text, capture_instruction_from_text, capture_hero, empty_inventory, change_resolution_coord, change_resolution_region, color, color_press
+from custom_func import im_to_text, capture_hero, empty_inventory, change_resolution_coord, change_resolution_region, color, color_press
 import logging
 from sys import exit
 import PIL
-
+from imagehash import average_hash
 
 def goto_fishing_spot():
     print("Detected dead hero: Will wait for 15 and go back")
@@ -37,69 +37,6 @@ def goto_fishing_spot():
 def click_fish():
     pyautogui.moveTo(ITEM_SLOTS[0])
     pyautogui.click()
-
-
-def capture_instruction(x=0):
-    # try:
-    im = pyautogui.screenshot(region=SCAN_AREA)
-    # im.save(str(x) + '.png')
-    # img = np.array(im)
-    text = im_to_text(im)
-
-    # color_values = img_color_text_anly(img)
-    down, up = 0, 0
-    for i, color in enumerate(color_values):
-        if UP[i][0] <= color <= UP[i][1]:
-            up += 1
-        if DOWN[i][0] <= color <= DOWN[i][1]:
-            down += 1
-    if up == 3:
-        pyautogui.press("up")
-        return True
-    elif down == 3:
-        pyautogui.press("down")
-        return True
-    else:
-        return False
-
-
-def img_color_text_anly(img):
-    # img = cv2.imread(path)  # Read input image
-
-    h_red = cv2.calcHist([img], [2], None, [256], [0, 256])
-    h_green = cv2.calcHist([img], [1], None, [256], [0, 256])
-    h_blue = cv2.calcHist([img], [0], None, [256], [0, 256])
-
-    # h_red.sum() must be img.shape[0]*img.shape[1]
-
-    # Remove background pixels from the histograms.
-    # Set histogram bins above 230 with zero
-    # assume all text has lower values of red, green and blue.
-    h_red[230:] = 0
-    h_green[230:] = 0
-    h_blue[230:] = 0
-
-    # Compute number of elements in histogram, after removing background
-    count_red = h_red.sum()
-    count_green = h_green.sum()
-    count_blue = h_blue.sum()
-
-    # Compute the sum of pixels in the original image according to histogram.
-    # Example:
-    # If h[100] = 10
-    # Then there are 10 pixels with value 100 in the image.
-    # The sum of the 10 pixels is 100*10.
-    # The sum of an pixels in the original image is: h[0]*0 + h[1]*1 + h[2]*2...
-    sum_red = np.sum(h_red * np.c_[0:256])
-    sum_green = np.sum(h_green * np.c_[0:256])
-    sum_blue = np.sum(h_blue * np.c_[0:256])
-
-    # Compute the average - divide sum by count.
-    avg_red = sum_red / count_red
-    avg_green = sum_green / count_green
-    avg_blue = sum_blue / count_blue
-    return avg_red, avg_green, avg_blue
-    # print('Text RGB average is about: {}, {}, {}'.format(avg_red, avg_green, avg_blue))
 
 
 def send_chat(text: str):
@@ -146,10 +83,12 @@ if __name__ == '__main__':
     scanned_text = ""
     last_fish_time = time()
     last_suicide = time()
+    last_pause = time()
     while True:
         if keyboard.is_pressed("shift+p"):
             Pause = False
             last_suicide = time()
+            last_pause = time()
             sleep(1)
         elif keyboard.is_pressed("shift+q"):
             break
@@ -165,67 +104,24 @@ if __name__ == '__main__':
                 logging.info("[Quitting]: " + str(datetime.now()))
                 exit()
                 break
-            if time() - empty_inventory_countdown > 1800:
+            if time() - empty_inventory_countdown > 1800 and time() - last_pause > 1800:
                 empty_inventory_countdown = time()
                 logging.info("Dropping inventory (because timer): " + str(datetime.now()))
                 empty_inventory(ITEM_SLOTS[3:], HERO_PORTRAIT[:2])
 
-            fish_time = time()
-            #image = pyautogui.screenshot(region=SCAN_AREA)
-            #text = im_to_text(image)
-            #is_fishing = capture_instruction_from_text(text)
             im = PIL.ImageGrab.grab(bbox=(SCAN_PIXEL_LOCATION[0], SCAN_PIXEL_LOCATION[1], SCAN_PIXEL_LOCATION[0]+1, SCAN_PIXEL_LOCATION[1]+1))
             im_color = color(im.getpixel((0, 0)))
-            is_fishing = 0
-            if is_fishing == 1:
-                fishing_presses = 0
-                print("starting fishing routine")
+            if im_color:
                 last_fish_time = time()
-                while time() - fish_time < 5 and fishing_presses < 20 and False:
-                    if keyboard.is_pressed("shift+p"):
-                        Pause = True
-                        sleep(5)
-                        break
-                    if keyboard.is_pressed("shift+q"):
-                        print("Quitting")
-                        logging.info("[Quitting]: " + str(datetime.now()))
-                        exit()
-                        break
-                    #image = pyautogui.screenshot(region=SCAN_AREA)
-                    #text = im_to_text(image)
-                    #fishpress = capture_instruction_from_text(text)
-                    #if fishpress == 1:
-                    #    fishing_presses += 1
-                    #if scanned_text != text:
-                    #    print(f"{text}")
-                    #    scanned_text = text
-
-            elif is_fishing == 0:
-                #image = pyautogui.screenshot(region=SCAN_AREA)
-                hero_portrait = pyautogui.screenshot(region=HERO_PORTRAIT)
-                #text = im_to_text(image)
-                #capture_instruction_from_text(text)
-                im = PIL.ImageGrab.grab(bbox=(SCAN_PIXEL_LOCATION[0], SCAN_PIXEL_LOCATION[1], SCAN_PIXEL_LOCATION[0]+1, SCAN_PIXEL_LOCATION[1]+1))
-                im_color = color(im.getpixel((0, 0)))
                 color_press(im_color)
-                if im_color:
-                    last_fish_time = time()
-                click_fish()
 
-                sleep(0.1)
-                if capture_hero(hero_portrait):
-                    logging.info("Hero died: " + str(datetime.now()))
-                    goto_fishing_spot()
-            else:
-                logging.info("[Full inventory] Dropping inventory (Inventory full): " + str(datetime.now()))
-                empty_inventory(ITEM_SLOTS[3:], HERO_PORTRAIT[:2])
-                empty_inventory_countdown = time()
-            if Pause:
-                break
 
-            #if scanned_text != text:
-            #    print(f"{text}")
-            #    scanned_text = text
+
+            if capture_hero(HERO_PORTRAIT):
+                logging.info("Hero died: " + str(datetime.now()))
+                goto_fishing_spot()
+            click_fish()
+            sleep(0.1)
 
             if time() - empty_inventory_countdown > 60:
                 image = pyautogui.screenshot(region=SCAN_AREA)
@@ -234,10 +130,14 @@ if __name__ == '__main__':
                     empty_inventory(ITEM_SLOTS[3:], HERO_PORTRAIT[:2])
                     empty_inventory_countdown = time()
 
+            imagehash.average_hash(Image.open("C:/Users/laptop/PycharmProjects/TeveFish/cap5.png"))
 
             if time() - last_fish_time > 60 * 5 and time() - last_suicide > 60 * 5:
                 logging.info("[Stuck] Trying suicide: " + str(datetime.now()))
                 send_chat("-k")
                 last_suicide = time()
+
+
+
 
 
