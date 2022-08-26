@@ -135,7 +135,7 @@ if __name__ == '__main__':
                 click_fish()
             elif time() - last_fish_time > 10:
                 if empty_inventory_after_fish:
-                    logging.info("[Timed inventory empty] Clearing inventory: " + str(datetime.now()))
+
                     inventory_emptying_timer = time()
                     empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:4], HERO_PORTRAIT[:2])
                     move_inventory(ITEM_SLOTS[4:], ITEM_SLOTS[EMPTY_INVENTORY_FROM:EMPTY_INVENTORY_FROM + 1])
@@ -145,14 +145,15 @@ if __name__ == '__main__':
                     break
 
             if time() - inventory_emptying_timer > DROP_INVENTORY_INTERVAL * 60:
-                print("Because timer")
                 inventory_emptying_timer = time()
+                logging.info("[Timed] Clearing inventory: " + str(datetime.now()))
                 empty_inventory_after_fish = True
 
             if time() - inventory_full_check > 30:
                 inventory_full_check = time()
                 if full_inventory(ITEM_SLOTS[4:], COMPARES):
                     empty_inventory_after_fish = True
+                    logging.info("[Inventory Full] Clearing inventory: " + str(datetime.now()))
 
             if time() - last_fish_time > 60 * STUCK_INTERVAL and time() - last_suicide > 60 * STUCK_INTERVAL:
                 logging.info("[Stuck] Trying suicide: " + str(datetime.now()))
