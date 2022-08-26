@@ -2,7 +2,6 @@ import pyautogui
 import keyboard
 import time
 from os import environ
-# from PIL import ImageOps
 USERNAME = environ.get('USERNAME')
 
 def change_resolution_coord(coord, to_resolution=(1920, 1080)):
@@ -65,20 +64,37 @@ def capture_position():
 def empty_inventory(slots, drop_off):
     for slot in slots:
         pyautogui.moveTo(slot)
-        time.sleep(0.01)
+        time.sleep(0.03)
         pyautogui.click(button='right')
-        time.sleep(0.01)
+        time.sleep(0.03)
         pyautogui.moveTo(drop_off)
-        time.sleep(0.01)
+        time.sleep(0.03)
         pyautogui.click()
-        time.sleep(0.01)
+        time.sleep(0.03)
 
-def full_inventory(slots):
-    threshold = 20
-    full_inv = False
-    for slot in slots:
-        pass
-    return full_inv
+
+def move_inventory(from_slots, to_slots):
+    for from_slot, to_slot in zip(from_slots, to_slots):
+        pyautogui.moveTo(from_slot)
+        time.sleep(0.08)
+        pyautogui.click(button='right')
+        time.sleep(0.08)
+        pyautogui.moveTo(to_slot)
+        time.sleep(0.08)
+        pyautogui.click()
+        time.sleep(0.08)
+
+
+def full_inventory(slots, compares):
+    threshold = 15
+    for slot, compare in zip(slots, compares):
+        match = True
+        im = pyautogui.screenshot(region=(slot[0], slot[1], 1, 1))
+        for pixel, check_px in zip(im.getpixel((0, 0)), compare):
+            if abs(pixel - check_px) > threshold:
+                return True
+    return False
+
 
 def capture_hero(img) -> bool:
     extrema = img.convert("L").getextrema()

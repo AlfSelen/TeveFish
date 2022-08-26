@@ -5,11 +5,10 @@ from settings import *
 from time import sleep, time
 from datetime import datetime
 import keyboard
-from custom_func import im_to_text, capture_hero, empty_inventory, change_resolution_coord, change_resolution_region, color, color_press
+from custom_func import capture_hero, empty_inventory, change_resolution_coord, change_resolution_region, color, color_press, full_inventory, move_inventory
 import logging
 from sys import exit
-import PIL
-from imagehash import average_hash
+
 
 def goto_fishing_spot():
     print("Detected dead hero: Will wait for 15 and go back")
@@ -49,44 +48,60 @@ def send_chat(text: str):
 
 
 if __name__ == '__main__':
+    print("Starting in 3")
+    sleep(3)
+
     logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
     logging.info("[Started]: " + str(datetime.now()))
-    empty_inventory_countdown = time()
 
     # code for adding other screen resolutions support
     res_width, res_height = pyautogui.size()
-    RESOLUTION = "x".join(map(str,[res_width,res_height]))
+    RESOLUTION = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
     for position in LOCATIONS["2560x1440"][:-1]:
-        resolution_key.append([change_resolution_coord(position[0],tuple(map(int,RESOLUTION.split("x")))), position[1]])
+        resolution_key.append([change_resolution_coord(position[0], tuple(map(int, RESOLUTION.split("x")))), position[1]])
     resolution_key.append(
-        [change_resolution_coord(LOCATIONS["2560x1440"][-1][0],tuple(map(int,RESOLUTION.split("x")))), LOCATIONS["2560x1440"][-1][1], change_resolution_coord(LOCATIONS["2560x1440"][-1][2],tuple(map(int,RESOLUTION.split("x"))))])
+        [change_resolution_coord(LOCATIONS["2560x1440"][-1][0], tuple(map(int, RESOLUTION.split("x")))), LOCATIONS["2560x1440"][-1][1], change_resolution_coord(LOCATIONS["2560x1440"][-1][2], tuple(map(int, RESOLUTION.split("x"))))])
     LOCATIONS[RESOLUTION] = resolution_key
     print(LOCATIONS[RESOLUTION])
     # SCAN_AREA
-    SCAN_AREA = change_resolution_region(SCAN_AREA, tuple(map(int,RESOLUTION.split("x"))))
-    SCAN_PIXEL_LOCATION = change_resolution_coord(SCAN_PIXEL_LOCATION, tuple(map(int,RESOLUTION.split("x"))))
+    SCAN_AREA = change_resolution_region(SCAN_AREA, tuple(map(int, RESOLUTION.split("x"))))
+    SCAN_PIXEL_LOCATION = change_resolution_coord(SCAN_PIXEL_LOCATION, tuple(map(int, RESOLUTION.split("x"))))
     # HERO_PORTRAIT
-    HERO_PORTRAIT = change_resolution_region(HERO_PORTRAIT, tuple(map(int,RESOLUTION.split("x"))))
-    #ITEM_SLOTS
+    HERO_PORTRAIT = change_resolution_region(HERO_PORTRAIT, tuple(map(int, RESOLUTION.split("x"))))
+    # ITEM_SLOTS
     items = []
     for item in ITEM_SLOTS:
-        items.append(change_resolution_coord(item, tuple(map(int,RESOLUTION.split("x")))))
+        items.append(change_resolution_coord(item, tuple(map(int, RESOLUTION.split("x")))))
     ITEM_SLOTS = tuple(items)
+    # Last 2 items slots for comparison to full inventory
+    COMPARES = []
+    for slot in ITEM_SLOTS[4:]:
+        im = pyautogui.screenshot(region=(slot[0], slot[1], 1, 1))
+        pixel = im.getpixel((0, 0))
+        COMPARES.append(pixel)
+    EMPTY_INVENTORY_FROM = 1
+    if POSITION == 4:
+        EMPTY_INVENTORY_FROM = 2
     # endregion screen resolution support
 
-    print("Starting in 3")
-    sleep(3)
     x = 0
     Pause = False
+    soft_pause = False
     scanned_text = ""
     last_fish_time = time()
     last_suicide = time()
     last_pause = time()
+    inventory_full_check = time()
+    inventory_emptying_timer = time()
+    empty_inventory_after_fish = False
+
+    empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:], HERO_PORTRAIT[:2])
     while True:
         if keyboard.is_pressed("shift+p"):
             Pause = False
+            soft_pause = False
             last_suicide = time()
             last_pause = time()
             sleep(1)
@@ -99,45 +114,49 @@ if __name__ == '__main__':
                 Pause = True
                 sleep(1)
                 break
+            if keyboard.is_pressed("ctrl+p"):
+                soft_pause = True
             if keyboard.is_pressed("shift+q"):
                 print("Quitting")
                 logging.info("[Quitting]: " + str(datetime.now()))
                 exit()
                 break
-            if time() - empty_inventory_countdown > 1800 and time() - last_pause > 1800:
-                empty_inventory_countdown = time()
-                logging.info("Dropping inventory (because timer): " + str(datetime.now()))
-                empty_inventory(ITEM_SLOTS[3:], HERO_PORTRAIT[:2])
-
-            im = PIL.ImageGrab.grab(bbox=(SCAN_PIXEL_LOCATION[0], SCAN_PIXEL_LOCATION[1], SCAN_PIXEL_LOCATION[0]+1, SCAN_PIXEL_LOCATION[1]+1))
+            im = pyautogui.screenshot(region=(SCAN_PIXEL_LOCATION[0], SCAN_PIXEL_LOCATION[1], 1, 1))
             im_color = color(im.getpixel((0, 0)))
             if im_color:
                 last_fish_time = time()
                 color_press(im_color)
 
-
-
-            if capture_hero(HERO_PORTRAIT):
+            if capture_hero(pyautogui.screenshot(region=(HERO_PORTRAIT[0], HERO_PORTRAIT[1], HERO_PORTRAIT[2], HERO_PORTRAIT[3]))):
                 logging.info("Hero died: " + str(datetime.now()))
                 goto_fishing_spot()
-            click_fish()
-            sleep(0.1)
 
-            if time() - empty_inventory_countdown > 60:
-                image = pyautogui.screenshot(region=SCAN_AREA)
-                text = im_to_text(image)
-                if capture_instruction_from_text(text) == -1:
-                    empty_inventory(ITEM_SLOTS[3:], HERO_PORTRAIT[:2])
-                    empty_inventory_countdown = time()
+            if not empty_inventory_after_fish and not soft_pause:
+                click_fish()
+            elif time() - last_fish_time > 10:
+                if empty_inventory_after_fish:
+                    logging.info("[Timed inventory empty] Clearing inventory: " + str(datetime.now()))
+                    inventory_emptying_timer = time()
+                    empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:4], HERO_PORTRAIT[:2])
+                    move_inventory(ITEM_SLOTS[4:], ITEM_SLOTS[EMPTY_INVENTORY_FROM:EMPTY_INVENTORY_FROM + 1])
+                    empty_inventory_after_fish = False
+                elif soft_pause:
+                    Pause = False
+                    break
 
-            imagehash.average_hash(Image.open("C:/Users/laptop/PycharmProjects/TeveFish/cap5.png"))
+            if time() - inventory_emptying_timer > DROP_INVENTORY_INTERVALL * 60:
+                print("Because timer")
+                inventory_emptying_timer = time()
+                empty_inventory_after_fish = True
 
-            if time() - last_fish_time > 60 * 5 and time() - last_suicide > 60 * 5:
+            if time() - inventory_full_check > 30:
+                inventory_full_check = time()
+                if full_inventory(ITEM_SLOTS[4:], COMPARES):
+                    empty_inventory_after_fish = True
+
+            if time() - last_fish_time > 60 * STUCK_INTERVAL and time() - last_suicide > 60 * STUCK_INTERVAL:
                 logging.info("[Stuck] Trying suicide: " + str(datetime.now()))
                 send_chat("-k")
                 last_suicide = time()
 
-
-
-
-
+            sleep(0.1)
