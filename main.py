@@ -144,7 +144,7 @@ if __name__ == '__main__':
                     Pause = False
                     break
 
-            if time() - inventory_emptying_timer > DROP_INVENTORY_INTERVALL * 60:
+            if time() - inventory_emptying_timer > DROP_INVENTORY_INTERVAL * 60:
                 print("Because timer")
                 inventory_emptying_timer = time()
                 empty_inventory_after_fish = True

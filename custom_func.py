@@ -2,7 +2,9 @@ import pyautogui
 import keyboard
 import time
 from os import environ
+
 USERNAME = environ.get('USERNAME')
+
 
 def change_resolution_coord(coord, to_resolution=(1920, 1080)):
     # Standard resolution "2560x1440"
@@ -10,11 +12,12 @@ def change_resolution_coord(coord, to_resolution=(1920, 1080)):
     out_cord = (int(coord[0] * to_resolution[0] / standard_res[0]), int(coord[1] * to_resolution[1] / standard_res[1]))
     return out_cord
 
-def change_resolution_region(region, to_resolution=(1920,1080)):
+
+def change_resolution_region(region, to_resolution=(1920, 1080)):
     standard_res = (2560, 1440)
     out_xy_from = (int(region[0] * to_resolution[0] / standard_res[0]), int(region[2] * to_resolution[1] / standard_res[1]))
-    out_xy_to   = (int(region[1] * to_resolution[0] / standard_res[0]), int(region[3] * to_resolution[1] / standard_res[1]))
-    out_region = (out_xy_from[0],out_xy_to[0],out_xy_from[1],out_xy_to[1])
+    out_xy_to = (int(region[1] * to_resolution[0] / standard_res[0]), int(region[3] * to_resolution[1] / standard_res[1]))
+    out_region = (out_xy_from[0], out_xy_to[0], out_xy_from[1], out_xy_to[1])
     return out_region
 
 
@@ -39,6 +42,7 @@ def color(compare_pixel: (int, int)) -> str:
     if yellow:
         return "Yellow"
 
+
 def color_press(pixel_color: str):
     """
 
@@ -50,6 +54,7 @@ def color_press(pixel_color: str):
     elif pixel_color == "Green":
         pyautogui.press("down")
     time.sleep(0.05)
+
 
 def capture_position():
     while True:
@@ -88,7 +93,6 @@ def move_inventory(from_slots, to_slots):
 def full_inventory(slots, compares):
     threshold = 15
     for slot, compare in zip(slots, compares):
-        match = True
         im = pyautogui.screenshot(region=(slot[0], slot[1], 1, 1))
         for pixel, check_px in zip(im.getpixel((0, 0)), compare):
             if abs(pixel - check_px) > threshold:

@@ -36,7 +36,7 @@ Run the program:
 1. Open command prompt: python main.py (you have to write the full path of main.py, optionally just drag and drop the file into the command prompt window and it should add the full filepath automaticaly)
 Then program will start within 3 sec
 Shift + P: Pause / Unpause program
-Ctrl + P: Softpause - Will pause after its done with the current fish
+Ctrl + P: Soft pause - Will pause after its done with the current fish
 Shift + Q: Quit program
 
 
