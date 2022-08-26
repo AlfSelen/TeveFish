@@ -57,6 +57,6 @@ Version 2.0
 Reduced the complexity, reduced the dependencies, installation process made easier and patched the program to work with the new version on wc3 (the fonts were tweaked in a update which broke the detection).
 Also moved project to Github.
 
-Copyright GoriMeri, your hereby agree that you will give credit to the author and link to the github at https://github.com/AlfSelen/TeveFish if you are sharing the code or by using parts of the code in your own project.
+Copyright GoriMeri / github.com/AlfSelen , your hereby agree that you will give credit to the author and link to the github at https://github.com/AlfSelen/TeveFish if you are sharing the code or by using parts of the code in your own project.
 
-Goodluck and enjoy
+Good luck and enjoy!
