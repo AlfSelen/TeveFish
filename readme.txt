@@ -54,6 +54,8 @@ New: Automatic resolution detection added - This means that the software should 
 Version 1.1a:
 Fixed small bug with last fishing spot not working with all screen resolutions
 Version 2.0
-Reduced the complexity, reduced the dependencies, patched the program to work with the new version on wc3 (the fonts were tweaked in a update which broke the detection)
+Reduced the complexity, reduced the dependencies, installation process made easier and patched the program to work with the new version on wc3 (the fonts were tweaked in a update which broke the detection)
 
 Copyright GoriMeri, your hereby agree that you will give credit to the author and link to the github at https://github.com/AlfSelen/TeveFish if you are sharing the code or by using parts of the code in your own project.
+
+Goodluck and enjoy
