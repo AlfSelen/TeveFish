@@ -15,7 +15,7 @@ Automatic resolution detection - Should work at all screen resolutions.
 
 Installation:
 1. Install python (remember to check the add to path during installation)
-2. Open Command Prompt and write: pip install keyboard PyAutoGUI (this will install the requirements for the program)
+2. Open Command Prompt and write: pip install keyboard PyAutoGUI Pillow (this will install the requirements for the program)
 
 Settings setup:
 In settings.py change POSITION variable to corresponding number.
