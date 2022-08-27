@@ -40,15 +40,6 @@ Ctrl + P: Soft pause - Will pause after its done with the current fish
 Shift + Q: Quit program
 
 
-
-Installation hard - if you wanna do it another way
-1. Make sure python is installed
-2. Install the required libraries: pip install -r requirements.txt and the tesserocr library.
-3. Change variable 'tess_path' to your tesserocr path, (write tesseract in cmd, might help ya)
-
-
-
-
 Version 1.1:
 New: Automatic resolution detection added - This means that the software should work at all screen resolutions.
 Version 1.1a:
