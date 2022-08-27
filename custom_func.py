@@ -21,26 +21,18 @@ def change_resolution_region(region, to_resolution=(1920, 1080)):
     return out_region
 
 
-def color(compare_pixel: (int, int)) -> str:
+def color(compare_pixel) -> str:
     """
-    Returns color of pixel (Green/Yellow/ None)
+    Returns color of pixel (Green/Yellow/"")
     :param compare_pixel:
     :return:
     """
-
-    THRESHOLD_YELLOW_UP = (255, 204, 0, 255)
-    THRESHOLD_GREEN_DOWN = (0, 255, 0, 255)
-    THRESHOLD = 15
-    green, yellow = True, True
-    for val, check_yellow, check_green in zip(compare_pixel, THRESHOLD_YELLOW_UP, THRESHOLD_GREEN_DOWN):
-        if abs(val - check_yellow) > THRESHOLD:
-            yellow = False
-        if abs(val - check_green) > THRESHOLD:
-            green = False
-    if green:
-        return "Green"
-    if yellow:
+    if compare_pixel[0] > 179 and 140 < compare_pixel[1] < 210 and compare_pixel[2] < 50:
         return "Yellow"
+    elif compare_pixel[0] < 25 and 199 < compare_pixel[1] and compare_pixel[2] < 25:
+        return "Green"
+    else:
+        return ""
 
 
 def color_press(pixel_color: str):

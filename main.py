@@ -68,6 +68,7 @@ if __name__ == '__main__':
     # SCAN_AREA
     SCAN_AREA = change_resolution_region(SCAN_AREA, tuple(map(int, RESOLUTION.split("x"))))
     SCAN_PIXEL_LOCATION = change_resolution_coord(SCAN_PIXEL_LOCATION, tuple(map(int, RESOLUTION.split("x"))))
+    print(f"SCAN_PIXEL_LOCATION:{SCAN_PIXEL_LOCATION}")
     # HERO_PORTRAIT
     HERO_PORTRAIT = change_resolution_region(HERO_PORTRAIT, tuple(map(int, RESOLUTION.split("x"))))
     # ITEM_SLOTS
@@ -121,8 +122,19 @@ if __name__ == '__main__':
                 logging.info("[Quitting]: " + str(datetime.now()))
                 exit()
                 break
-            im = pyautogui.screenshot(region=(SCAN_PIXEL_LOCATION[0], SCAN_PIXEL_LOCATION[1], 1, 1))
-            im_color = color(im.getpixel((0, 0)))
+            im = pyautogui.screenshot(region=(SCAN_PIXEL_LOCATION[0]-6, SCAN_PIXEL_LOCATION[1], 10, 1))
+            greens, yellows = 0,0
+            for i in range(10):
+                pixel_color = color(im.getpixel((i, 0)))
+                if  pixel_color == "Green":
+                    greens += 1
+                elif pixel_color == "Yellow":
+                    yellows += 1
+            im_color = ""
+            if greens > 2:
+                im_color = "Green"
+            elif yellows > 2:
+                im_color = "Yellow"
             if im_color:
                 last_fish_time = time()
                 color_press(im_color)
