@@ -49,6 +49,8 @@ Reduced the complexity, reduced the dependencies, installation process made easi
 Also moved project to Github.
 Version 2.0.1
 Fixed detection of arrow presses, should now work on all resolutions
+Version 2.0.1a
+Fixed first fishingspot
 
 Copyright GoriMeri / github.com/AlfSelen , your hereby agree that you will give credit to the author and link to the github at https://github.com/AlfSelen/TeveFish if you are sharing the code or by using parts of the code in your own project.
 
