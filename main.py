@@ -1,13 +1,35 @@
 # Made by GoriMeri
 
 import pyautogui
-from settings import *
+from settings import (
+    POSITION,
+    LOCATIONS,
+    SCAN_AREA,
+    SCAN_PIXEL_LOCATION,
+    HERO_PORTRAIT,
+    STUCK_INTERVAL,
+    DROP_INVENTORY_INTERVAL,
+    ITEM_SLOTS,
+)
 from time import sleep, time
 from datetime import datetime
 import keyboard
-from custom_func import capture_hero, empty_inventory, change_resolution_coord, change_resolution_region, color, color_press, full_inventory, move_inventory
+from custom_func import (
+    capture_hero,
+    empty_inventory,
+    change_resolution_coord,
+    change_resolution_region,
+    color,
+    color_press,
+    full_inventory,
+    move_inventory,
+)
 import logging
 from sys import exit
+
+
+is_paused = False
+is_running = True
 
 
 def goto_fishing_spot():
@@ -16,21 +38,21 @@ def goto_fishing_spot():
     keyboard.press("1")
     sleep(0.2)
     if POSITION == 4:
-        pyautogui.moveTo((LOCATIONS[RESOLUTION][POSITION][2]))
+        pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][2]))
         sleep(0.05)
         pyautogui.click()
         sleep(0.05)
-        pyautogui.click(button='right')
-        keyboard.press('shift')
+        pyautogui.click(button="right")
+        keyboard.press("shift")
         sleep(0.05)
-    pyautogui.moveTo((LOCATIONS[RESOLUTION][POSITION][0]))
+    pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][0]))
     sleep(0.05)
     pyautogui.click()
     sleep(0.1)
-    pyautogui.click(button='right')
+    pyautogui.click(button="right")
     sleep(0.1)
-    keyboard.release('shift')
-    sleep(LOCATIONS[RESOLUTION][POSITION][1])
+    keyboard.release("shift")
+    sleep(LOCATIONS[widthXheigth][POSITION][1])
 
 
 def click_fish():
@@ -47,34 +69,59 @@ def send_chat(text: str):
     sleep(0.02)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    # global is_paused
+    # global is_running
     print("Starting in 3")
     sleep(3)
 
-    logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+    logging.basicConfig(filename="example.log", encoding="utf-8", level=logging.DEBUG)
     logging.info("[Started]: " + str(datetime.now()))
 
     # code for adding other screen resolutions support
     res_width, res_height = pyautogui.size()
-    RESOLUTION = "x".join(map(str, [res_width, res_height]))
+    widthXheigth = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
     for position in LOCATIONS["2560x1440"][:-1]:
-        resolution_key.append([change_resolution_coord(position[0], tuple(map(int, RESOLUTION.split("x")))), position[1]])
+        resolution_key.append(
+            [
+                change_resolution_coord(
+                    position[0], tuple(map(int, widthXheigth.split("x")))
+                ),
+                position[1],
+            ]
+        )
     resolution_key.append(
-        [change_resolution_coord(LOCATIONS["2560x1440"][-1][0], tuple(map(int, RESOLUTION.split("x")))), LOCATIONS["2560x1440"][-1][1], change_resolution_coord(LOCATIONS["2560x1440"][-1][2], tuple(map(int, RESOLUTION.split("x"))))])
-    LOCATIONS[RESOLUTION] = resolution_key
-    print(LOCATIONS[RESOLUTION])
+        [
+            change_resolution_coord(
+                LOCATIONS["2560x1440"][-1][0], tuple(map(int, widthXheigth.split("x")))
+            ),
+            LOCATIONS["2560x1440"][-1][1],
+            change_resolution_coord(
+                LOCATIONS["2560x1440"][-1][2], tuple(map(int, widthXheigth.split("x")))
+            ),
+        ]
+    )
+    LOCATIONS[widthXheigth] = resolution_key
     # SCAN_AREA
-    SCAN_AREA = change_resolution_region(SCAN_AREA, tuple(map(int, RESOLUTION.split("x"))))
-    SCAN_PIXEL_LOCATION = change_resolution_coord(SCAN_PIXEL_LOCATION, tuple(map(int, RESOLUTION.split("x"))))
+    SCAN_AREA = change_resolution_region(
+        SCAN_AREA, tuple(map(int, widthXheigth.split("x")))
+    )
+    SCAN_PIXEL_LOCATION = change_resolution_coord(
+        SCAN_PIXEL_LOCATION, tuple(map(int, widthXheigth.split("x")))
+    )
     print(f"SCAN_PIXEL_LOCATION:{SCAN_PIXEL_LOCATION}")
     # HERO_PORTRAIT
-    HERO_PORTRAIT = change_resolution_region(HERO_PORTRAIT, tuple(map(int, RESOLUTION.split("x"))))
+    HERO_PORTRAIT = change_resolution_region(
+        HERO_PORTRAIT, tuple(map(int, widthXheigth.split("x")))
+    )
     # ITEM_SLOTS
     items = []
     for item in ITEM_SLOTS:
-        items.append(change_resolution_coord(item, tuple(map(int, RESOLUTION.split("x")))))
+        items.append(
+            change_resolution_coord(item, tuple(map(int, widthXheigth.split("x"))))
+        )
     ITEM_SLOTS = tuple(items)
     # Last 2 items slots for comparison to full inventory
     COMPARES = []
@@ -122,11 +169,13 @@ if __name__ == '__main__':
                 logging.info("[Quitting]: " + str(datetime.now()))
                 exit()
                 break
-            im = pyautogui.screenshot(region=(SCAN_PIXEL_LOCATION[0]-6, SCAN_PIXEL_LOCATION[1], 10, 1))
-            greens, yellows = 0,0
+            im = pyautogui.screenshot(
+                region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
+            )
+            greens, yellows = 0, 0
             for i in range(10):
                 pixel_color = color(im.getpixel((i, 0)))
-                if  pixel_color == "Green":
+                if pixel_color == "Green":
                     greens += 1
                 elif pixel_color == "Yellow":
                     yellows += 1
@@ -139,7 +188,16 @@ if __name__ == '__main__':
                 last_fish_time = time()
                 color_press(im_color)
 
-            if capture_hero(pyautogui.screenshot(region=(HERO_PORTRAIT[0], HERO_PORTRAIT[1], HERO_PORTRAIT[2], HERO_PORTRAIT[3]))):
+            if capture_hero(
+                pyautogui.screenshot(
+                    region=(
+                        HERO_PORTRAIT[0],
+                        HERO_PORTRAIT[1],
+                        HERO_PORTRAIT[2],
+                        HERO_PORTRAIT[3],
+                    )
+                )
+            ):
                 logging.info("Hero died: " + str(datetime.now()))
                 goto_fishing_spot()
 
@@ -147,10 +205,14 @@ if __name__ == '__main__':
                 click_fish()
             elif time() - last_fish_time > 10:
                 if empty_inventory_after_fish:
-
                     inventory_emptying_timer = time()
-                    empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:4], HERO_PORTRAIT[:2])
-                    move_inventory(ITEM_SLOTS[4:], ITEM_SLOTS[EMPTY_INVENTORY_FROM:EMPTY_INVENTORY_FROM + 1])
+                    empty_inventory(
+                        ITEM_SLOTS[EMPTY_INVENTORY_FROM:4], HERO_PORTRAIT[:2]
+                    )
+                    move_inventory(
+                        ITEM_SLOTS[4:],
+                        ITEM_SLOTS[EMPTY_INVENTORY_FROM : EMPTY_INVENTORY_FROM + 1],
+                    )
                     empty_inventory_after_fish = False
                 elif soft_pause:
                     Pause = False
@@ -165,9 +227,14 @@ if __name__ == '__main__':
                 inventory_full_check = time()
                 if full_inventory(ITEM_SLOTS[4:], COMPARES):
                     empty_inventory_after_fish = True
-                    logging.info("[Inventory Full] Clearing inventory: " + str(datetime.now()))
+                    logging.info(
+                        "[Inventory Full] Clearing inventory: " + str(datetime.now())
+                    )
 
-            if time() - last_fish_time > 60 * STUCK_INTERVAL and time() - last_suicide > 60 * STUCK_INTERVAL:
+            if (
+                time() - last_fish_time > 60 * STUCK_INTERVAL
+                and time() - last_suicide > 60 * STUCK_INTERVAL
+            ):
                 logging.info("[Stuck] Trying suicide: " + str(datetime.now()))
                 send_chat("-k")
                 last_suicide = time()
