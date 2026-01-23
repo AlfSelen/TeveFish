@@ -13,7 +13,8 @@ from settings import (
 )
 from time import sleep, time
 from datetime import datetime
-import keyboard
+from pynput import keyboard
+from threading import Lock
 from custom_func import (
     capture_hero,
     empty_inventory,
@@ -25,17 +26,94 @@ from custom_func import (
     move_inventory,
 )
 import logging
-from sys import exit
+
+running = True
 
 
-is_paused = False
-is_running = True
+def on_press(key):
+    global running
+
+    try:
+        # check if Shift is held and a character key is pressed
+        if key.char.lower() == "q" and keyboard.Key.shift in current_keys:
+            running = False
+            print("Shift + Q pressed → exiting program")
+
+        if key.char.lower() == "p" and keyboard.Key.shift in current_keys:
+            running = False
+            print("Shift + P pressed → running set to False")
+
+    except AttributeError:
+        pass
+
+
+def on_release(key):
+    # remove key from the set when released
+    current_keys.discard(key)
+
+
+def on_press_wrapper(key):
+    current_keys.add(key)
+    on_press(key)
+
+
+class KeyState:
+    def __init__(self):
+        self.pressed_keys = set()
+        self.lock = Lock()
+        self.listener = None
+
+    def on_press(self, key):
+        with self.lock:
+            try:
+                if hasattr(key, "char") and key.char:
+                    self.pressed_keys.add(key.char)
+                else:
+                    self.pressed_keys.add(key.name)
+            except AttributeError:
+                self.pressed_keys.add(str(key))
+
+    def on_release(self, key):
+        with self.lock:
+            try:
+                if hasattr(key, "char") and key.char:
+                    self.pressed_keys.discard(key.char)
+                else:
+                    self.pressed_keys.discard(key.name)
+            except AttributeError:
+                self.pressed_keys.discard(str(key))
+
+    def is_pressed(self, key_combo):
+        with self.lock:
+            if "+" in key_combo:
+                parts = key_combo.lower().split("+")
+                return all(part in self.pressed_keys for part in parts)
+            else:
+                return key_combo.lower() in self.pressed_keys
+
+    def start_listener(self):
+        self.listener = keyboard.Listener(
+            on_press=self.on_press, on_release=self.on_release
+        )
+        self.listener.start()
+
+    def stop_listener(self):
+        if self.listener:
+            self.listener.stop()
+
+
+# Initialize key state tracker
+# key_state = KeyState()
+key_controller = keyboard.Controller()
+
+# track currently pressed keys
+current_keys = set()
 
 
 def goto_fishing_spot():
     print("Detected dead hero: Will wait for 15 and go back")
     sleep(15)
-    keyboard.press("1")
+    key_controller.press("1")
     sleep(0.2)
     if POSITION == 4:
         pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][2]))
@@ -43,7 +121,7 @@ def goto_fishing_spot():
         pyautogui.click()
         sleep(0.05)
         pyautogui.click(button="right")
-        keyboard.press("shift")
+        key_controller.press("shift")
         sleep(0.05)
     pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][0]))
     sleep(0.05)
@@ -51,7 +129,7 @@ def goto_fishing_spot():
     sleep(0.1)
     pyautogui.click(button="right")
     sleep(0.1)
-    keyboard.release("shift")
+    key_controller.release("shift")
     sleep(LOCATIONS[widthXheigth][POSITION][1])
 
 
@@ -61,25 +139,40 @@ def click_fish():
 
 
 def send_chat(text: str):
-    keyboard.send("enter")
+    key_controller.tap("enter")
     sleep(0.02)
-    keyboard.write(text)
+    key_controller.type(text)
     sleep(0.02)
-    keyboard.send("enter")
+    key_controller.tap("enter")
     sleep(0.02)
+
+
+def setup_logger():
+    logger = logging.getLogger("fishing_bot")
+    logger.setLevel(logging.DEBUG)
+
+    handler = logging.FileHandler("example.log", encoding="utf-8")
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.propagate = False
+    return logger
 
 
 if __name__ == "__main__":
-    # global is_paused
-    # global is_running
+    listener = keyboard.Listener(on_press=on_press_wrapper, on_release=on_release)
+    listener.start()  # <-- non-blocking
     print("Starting in 3")
     sleep(3)
 
-    logging.basicConfig(filename="example.log", encoding="utf-8", level=logging.DEBUG)
-    logging.info("[Started]: " + str(datetime.now()))
+    # logging.basicConfig(filename="example.log", encoding="utf-8", level=logging.DEBUG)
+    # logging.info("[Started]: " + str(datetime.now()))
+    logger = setup_logger()
 
     # code for adding other screen resolutions support
-    res_width, res_height = pyautogui.size()
+    # res_width, res_height = pyautogui.size()
+    res_width, res_height = 1920, 1080
     widthXheigth = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
@@ -145,30 +238,18 @@ if __name__ == "__main__":
     inventory_emptying_timer = time()
     empty_inventory_after_fish = False
 
+    # Start keyboard listener
+    # key_state.start_listener()
+
+    last_fish_time = time()
+    logger.debug("Emptying inventory")
     empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:], HERO_PORTRAIT[:2])
-    while True:
-        if keyboard.is_pressed("shift+p"):
-            Pause = False
-            soft_pause = False
-            last_suicide = time()
-            last_pause = time()
-            sleep(1)
-        elif keyboard.is_pressed("shift+q"):
-            break
-        else:
-            sleep(0.2)
-        while not Pause:
-            if keyboard.is_pressed("shift+p"):
-                Pause = True
-                sleep(1)
-                break
-            if keyboard.is_pressed("ctrl+p"):
-                soft_pause = True
-            if keyboard.is_pressed("shift+q"):
-                print("Quitting")
-                logging.info("[Quitting]: " + str(datetime.now()))
-                exit()
-                break
+    try:
+        iteration = time()
+        while running:
+
+            print(f"\rFPS: {1 / (time() - iteration)}", end="", flush=True)
+            iteration = time()
             im = pyautogui.screenshot(
                 region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
             )
@@ -187,8 +268,10 @@ if __name__ == "__main__":
             if im_color:
                 last_fish_time = time()
                 color_press(im_color)
+                logger.debug(f"Pressing: {im_color}Gr/Yl: {greens}/{yellows}")
+                continue
 
-            if capture_hero(
+            if time() - last_fish_time > 60 and capture_hero(
                 pyautogui.screenshot(
                     region=(
                         HERO_PORTRAIT[0],
@@ -198,11 +281,13 @@ if __name__ == "__main__":
                     )
                 )
             ):
-                logging.info("Hero died: " + str(datetime.now()))
+                logger.info("Hero died: " + str(datetime.now()))
                 goto_fishing_spot()
 
             if not empty_inventory_after_fish and not soft_pause:
-                click_fish()
+                if time() - last_fish_time > 3.5:
+                    # Jumpt to fish again
+                    click_fish()
             elif time() - last_fish_time > 10:
                 if empty_inventory_after_fish:
                     inventory_emptying_timer = time()
@@ -220,14 +305,14 @@ if __name__ == "__main__":
 
             if time() - inventory_emptying_timer > DROP_INVENTORY_INTERVAL * 60:
                 inventory_emptying_timer = time()
-                logging.info("[Timed] Clearing inventory: " + str(datetime.now()))
+                logger.info("[Timed] Clearing inventory: " + str(datetime.now()))
                 empty_inventory_after_fish = True
 
             if time() - inventory_full_check > 30:
                 inventory_full_check = time()
                 if full_inventory(ITEM_SLOTS[4:], COMPARES):
                     empty_inventory_after_fish = True
-                    logging.info(
+                    logger.info(
                         "[Inventory Full] Clearing inventory: " + str(datetime.now())
                     )
 
@@ -235,8 +320,12 @@ if __name__ == "__main__":
                 time() - last_fish_time > 60 * STUCK_INTERVAL
                 and time() - last_suicide > 60 * STUCK_INTERVAL
             ):
-                logging.info("[Stuck] Trying suicide: " + str(datetime.now()))
+                logger.info("[Stuck] Trying suicide: " + str(datetime.now()))
                 send_chat("-k")
                 last_suicide = time()
 
             sleep(0.1)
+    except KeyboardInterrupt:
+        print("Program interrupted by user")
+    finally:
+        listener.stop()

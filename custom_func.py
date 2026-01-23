@@ -1,5 +1,5 @@
 import pyautogui
-import keyboard
+from pynput import keyboard
 import time
 from os import environ
 
@@ -62,13 +62,49 @@ def color_press(pixel_color: str):
 
 
 def capture_position():
-    while True:
-        x, y = pyautogui.position()
-        if keyboard.is_pressed("e"):
-            print(x, y)
-        time.sleep(0.1)
-        if keyboard.is_pressed("q"):
-            break
+    key_controller = keyboard.Controller()
+
+    class LocalKeyState:
+        def __init__(self):
+            self.pressed_keys = set()
+
+        def on_press(self, key):
+            try:
+                if hasattr(key, "char") and key.char:
+                    self.pressed_keys.add(key.char)
+                else:
+                    self.pressed_keys.add(key.name)
+            except AttributeError:
+                self.pressed_keys.add(str(key))
+
+        def on_release(self, key):
+            try:
+                if hasattr(key, "char") and key.char:
+                    self.pressed_keys.discard(key.char)
+                else:
+                    self.pressed_keys.discard(key.name)
+            except AttributeError:
+                self.pressed_keys.discard(str(key))
+
+        def is_pressed(self, key):
+            return key.lower() in self.pressed_keys
+
+    local_key_state = LocalKeyState()
+    listener = keyboard.Listener(
+        on_press=local_key_state.on_press, on_release=local_key_state.on_release
+    )
+    listener.start()
+
+    try:
+        while True:
+            x, y = pyautogui.position()
+            if local_key_state.is_pressed("e"):
+                print(x, y)
+            time.sleep(0.1)
+            if local_key_state.is_pressed("q"):
+                break
+    finally:
+        listener.stop()
 
 
 def empty_inventory(slots, drop_off):

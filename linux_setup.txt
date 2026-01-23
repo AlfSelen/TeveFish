@@ -1,0 +1,1 @@
+sudo apt-get install scrot # Backend for screenshot required by pyautogui on linux
