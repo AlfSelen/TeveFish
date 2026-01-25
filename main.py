@@ -1,6 +1,8 @@
 # Made by GoriMeri
 
 import pyautogui
+from mss import mss
+import numpy as np
 from settings import (
     POSITION,
     LOCATIONS,
@@ -20,7 +22,7 @@ from custom_func import (
     empty_inventory,
     change_resolution_coord,
     change_resolution_region,
-    color,
+    color_np,
     color_press,
     full_inventory,
     move_inventory,
@@ -28,10 +30,12 @@ from custom_func import (
 import logging
 
 running = True
+paused = False
 
 
 def on_press(key):
     global running
+    global paused
 
     try:
         # check if Shift is held and a character key is pressed
@@ -40,8 +44,8 @@ def on_press(key):
             print("Shift + Q pressed → exiting program")
 
         if key.char.lower() == "p" and keyboard.Key.shift in current_keys:
-            running = False
-            print("Shift + P pressed → running set to False")
+            paused = not paused
+            print(f"Shift + P pressed → running set to {paused}")
 
     except AttributeError:
         pass
@@ -121,7 +125,7 @@ def goto_fishing_spot():
         pyautogui.click()
         sleep(0.05)
         pyautogui.click(button="right")
-        key_controller.press("shift")
+        key_controller.press(keyboard.Key.shift)
         sleep(0.05)
     pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][0]))
     sleep(0.05)
@@ -129,7 +133,7 @@ def goto_fishing_spot():
     sleep(0.1)
     pyautogui.click(button="right")
     sleep(0.1)
-    key_controller.release("shift")
+    key_controller.release(keyboard.Key.shift)
     sleep(LOCATIONS[widthXheigth][POSITION][1])
 
 
@@ -163,6 +167,7 @@ def setup_logger():
 if __name__ == "__main__":
     listener = keyboard.Listener(on_press=on_press_wrapper, on_release=on_release)
     listener.start()  # <-- non-blocking
+    sct = mss()
     print("Starting in 3")
     sleep(3)
 
@@ -247,15 +252,23 @@ if __name__ == "__main__":
     try:
         iteration = time()
         while running:
-
+            while paused:
+                sleep(0.5)
             print(f"\rFPS: {1 / (time() - iteration)}", end="", flush=True)
             iteration = time()
-            im = pyautogui.screenshot(
-                region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
-            )
+            monitor = {
+                "left": SCAN_PIXEL_LOCATION[0] - 6,
+                "top": SCAN_PIXEL_LOCATION[1],
+                "width": 10,
+                "height": 1,
+            }
+            im = np.array(sct.grab(monitor))
+            # im = pyautogui.screenshot(
+            #     region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
+            # )
             greens, yellows = 0, 0
             for i in range(10):
-                pixel_color = color(im.getpixel((i, 0)))
+                pixel_color = color_np(im[0, i])
                 if pixel_color == "Green":
                     greens += 1
                 elif pixel_color == "Yellow":

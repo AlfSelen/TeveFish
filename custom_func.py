@@ -47,6 +47,35 @@ def color(compare_pixel) -> str:
     else:
         return ""
 
+def color_np(pixel: "np.ndarray | tuple") -> str:
+    """
+    Returns color of pixel (Green / Yellow / "")
+    Expects pixel in BGRA or BGR format as returned by mss / numpy.
+    """
+
+    # MSS gives BGRA; ignore alpha if present
+    b = int(pixel[0])
+    g = int(pixel[1])
+    r = int(pixel[2])
+
+    # Yellow: high R, mid-high G, low B
+    if (
+        r > 179
+        and 140 < g < 210
+        and b < 50
+    ):
+        return "Yellow"
+
+    # Green: high G, low R and B
+    elif (
+        r < 25
+        and g > 199
+        and b < 25
+    ):
+        return "Green"
+
+    return ""
+
 
 def color_press(pixel_color: str):
     """
