@@ -1,3 +1,5 @@
 pynput
 PyAutoGUI
+numpy
 Pillow
+mss

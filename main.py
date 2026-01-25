@@ -41,6 +41,7 @@ def on_press(key):
         # check if Shift is held and a character key is pressed
         if key.char.lower() == "q" and keyboard.Key.shift in current_keys:
             running = False
+            paused = False
             print("Shift + Q pressed → exiting program")
 
         if key.char.lower() == "p" and keyboard.Key.shift in current_keys:
@@ -153,7 +154,7 @@ def send_chat(text: str):
 
 def setup_logger():
     logger = logging.getLogger("fishing_bot")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     handler = logging.FileHandler("example.log", encoding="utf-8")
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
@@ -177,7 +178,8 @@ if __name__ == "__main__":
 
     # code for adding other screen resolutions support
     # res_width, res_height = pyautogui.size()
-    res_width, res_height = 1920, 1080
+    # res_width, res_height = 1920, 1080
+    res_width, res_height = 2560, 1440
     widthXheigth = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
@@ -254,7 +256,7 @@ if __name__ == "__main__":
         while running:
             while paused:
                 sleep(0.5)
-            print(f"\rFPS: {1 / (time() - iteration)}", end="", flush=True)
+            print(f"\rFPS: {1 / (max(time() - iteration,0.000001))}", end="", flush=True)
             iteration = time()
             monitor = {
                 "left": SCAN_PIXEL_LOCATION[0] - 6,
@@ -284,7 +286,7 @@ if __name__ == "__main__":
                 logger.debug(f"Pressing: {im_color}Gr/Yl: {greens}/{yellows}")
                 continue
 
-            if time() - last_fish_time > 60 and capture_hero(
+            if time() - last_fish_time > 20 and capture_hero(
                 pyautogui.screenshot(
                     region=(
                         HERO_PORTRAIT[0],
