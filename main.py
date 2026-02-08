@@ -1,9 +1,11 @@
 # Made by GoriMeri
 
 import pyautogui
+import random
 from mss import mss
 import numpy as np
 from settings import (
+    BADFISH_CHANCE,
     POSITION,
     LOCATIONS,
     SCAN_AREA,
@@ -12,6 +14,7 @@ from settings import (
     STUCK_INTERVAL,
     DROP_INVENTORY_INTERVAL,
     ITEM_SLOTS,
+    ACTIVATE_BADFISH
 )
 from time import sleep, time
 from datetime import datetime
@@ -117,8 +120,6 @@ current_keys = set()
 
 def get_screen_position(coord, main_display):
     """Transform coordinate to current resolution and monitor position"""
-    # scaled = change_resolution_coord(coord, tuple(map(int, widthXheigth.split("x"))))
-    # x, y = map(int, widthXheigth.split("x"))
     return (coord[0] + main_display["left"], coord[1] + main_display["top"])
 
 
@@ -206,6 +207,7 @@ if __name__ == "__main__":
     # code for adding other screen resolutions support
     # res_width, res_height = 1920, 1080
     widthXheigth = f"{main_display['width']}x{main_display['height']}"
+    selected_resolution = (main_display["width"], main_display["height"])
     # widthXheigth = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
@@ -295,12 +297,14 @@ if __name__ == "__main__":
             )
             iteration = time()
             monitor = {
-                "left": SCAN_PIXEL_LOCATION[0] - 6 + main_display["left"],
+                "left": SCAN_PIXEL_LOCATION[0] - 6 + 20 + main_display["left"],
                 "top": SCAN_PIXEL_LOCATION[1] + main_display["top"],
                 "width": 10,
                 "height": 1,
             }
             im = np.array(sct.grab(monitor))
+            logger.debug(main_display)
+            logger.debug(monitor)
             # im = pyautogui.screenshot(
             #     region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
             # )
@@ -318,6 +322,9 @@ if __name__ == "__main__":
                 im_color = "Yellow"
             if im_color:
                 last_fish_time = time()
+                # Option to deliboratly press wrong to stop flying fish from spawing
+                if ACTIVATE_BADFISH and random.randrange(BADFISH_CHANCE) == 0:
+                    im_color = "Green" if im_color == "Yellow" else "Yellow"
                 color_press(im_color)
                 logger.debug(f"Pressing: {im_color}Gr/Yl: {greens}/{yellows}")
                 continue
@@ -373,7 +380,10 @@ if __name__ == "__main__":
 
             if time() - inventory_full_check > 60:
                 inventory_full_check = time()
-                if full_inventory(ITEM_SLOTS[4:], COMPARES):
+                transformed_slots = [
+                    get_screen_position(slot, main_display) for slot in ITEM_SLOTS[4:]
+                ]
+                if full_inventory(transformed_slots, COMPARES):
                     empty_inventory_after_fish = True
                     inventory_emptying_timer = time()
                     logger.info(
