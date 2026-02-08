@@ -1,9 +1,11 @@
 # Made by GoriMeri
 
 import pyautogui
+import random
 from mss import mss
 import numpy as np
 from settings import (
+    BADFISH_CHANCE,
     POSITION,
     LOCATIONS,
     SCAN_AREA,
@@ -12,6 +14,7 @@ from settings import (
     STUCK_INTERVAL,
     DROP_INVENTORY_INTERVAL,
     ITEM_SLOTS,
+    ACTIVATE_BADFISH
 )
 from time import sleep, time
 from datetime import datetime
@@ -115,20 +118,29 @@ key_controller = keyboard.Controller()
 current_keys = set()
 
 
-def goto_fishing_spot():
+def get_screen_position(coord, main_display):
+    """Transform coordinate to current resolution and monitor position"""
+    return (coord[0] + main_display["left"], coord[1] + main_display["top"])
+
+
+def goto_fishing_spot(main_display):
     print("Detected dead hero: Will wait for 15 and go back")
     sleep(15)
     key_controller.press("1")
     sleep(0.2)
     if POSITION == 4:
-        pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][2]))
+        right_click_pos = get_screen_position(
+            LOCATIONS[widthXheigth][POSITION][2], main_display
+        )
+        pyautogui.moveTo(right_click_pos)
         sleep(0.05)
         pyautogui.click()
         sleep(0.05)
         pyautogui.click(button="right")
         key_controller.press(keyboard.Key.shift)
         sleep(0.05)
-    pyautogui.moveTo((LOCATIONS[widthXheigth][POSITION][0]))
+    main_pos = get_screen_position(LOCATIONS[widthXheigth][POSITION][0], main_display)
+    pyautogui.moveTo(main_pos)
     sleep(0.05)
     pyautogui.click()
     sleep(0.1)
@@ -138,8 +150,9 @@ def goto_fishing_spot():
     sleep(LOCATIONS[widthXheigth][POSITION][1])
 
 
-def click_fish():
-    pyautogui.moveTo(ITEM_SLOTS[0])
+def click_fish(main_display):
+    fish_slot_pos = get_screen_position(ITEM_SLOTS[0], main_display)
+    pyautogui.moveTo(fish_slot_pos)
     pyautogui.click()
 
 
@@ -165,10 +178,25 @@ def setup_logger():
     return logger
 
 
+def select_monitor(sct) -> dict:
+    """returns {'left': 0, 'top': 0, 'width': 1920, 'height': 1080}"""
+    print("Available monitors:")
+    for i, m in enumerate(sct.monitors[1:], start=1):
+        print(f"{i}: {m['width']}x{m['height']} at ({m['left']}, {m['top']})")
+
+    if len(sct.monitors[1:]) > 1:
+        monitor_index = int(input("Select monitor (number): "))
+    else:
+        monitor_index = 1
+    monitor = sct.monitors[monitor_index]
+    return monitor
+
+
 if __name__ == "__main__":
     listener = keyboard.Listener(on_press=on_press_wrapper, on_release=on_release)
     listener.start()  # <-- non-blocking
     sct = mss()
+    main_display = select_monitor(sct)
     print("Starting in 3")
     sleep(3)
 
@@ -177,10 +205,10 @@ if __name__ == "__main__":
     logger = setup_logger()
 
     # code for adding other screen resolutions support
-    # res_width, res_height = pyautogui.size()
     # res_width, res_height = 1920, 1080
-    res_width, res_height = 2560, 1440
-    widthXheigth = "x".join(map(str, [res_width, res_height]))
+    widthXheigth = f"{main_display['width']}x{main_display['height']}"
+    selected_resolution = (main_display["width"], main_display["height"])
+    # widthXheigth = "x".join(map(str, [res_width, res_height]))
     # Map locations
     resolution_key = []
     for position in LOCATIONS["2560x1440"][:-1]:
@@ -226,7 +254,9 @@ if __name__ == "__main__":
     # Last 2 items slots for comparison to full inventory
     COMPARES = []
     for slot in ITEM_SLOTS[4:]:
-        im = pyautogui.screenshot(region=(slot[0], slot[1], 1, 1))
+        im = pyautogui.screenshot(
+            region=(slot[0] + main_display["left"], slot[1] + main_display["top"], 1, 1)
+        )
         pixel = im.getpixel((0, 0))
         COMPARES.append(pixel)
     EMPTY_INVENTORY_FROM = 1
@@ -249,22 +279,32 @@ if __name__ == "__main__":
     # key_state.start_listener()
 
     last_fish_time = time()
-    logger.debug("Emptying inventory")
-    empty_inventory(ITEM_SLOTS[EMPTY_INVENTORY_FROM:], HERO_PORTRAIT[:2])
+    # Transform inventory coordinates before calling functions
+    transformed_item_slots = [
+        get_screen_position(slot, main_display) for slot in ITEM_SLOTS
+    ]
+    transformed_hero_portrait_pos = get_screen_position(HERO_PORTRAIT[:2], main_display)
+    empty_inventory(
+        transformed_item_slots[EMPTY_INVENTORY_FROM:], transformed_hero_portrait_pos
+    )
     try:
         iteration = time()
         while running:
             while paused:
                 sleep(0.5)
-            print(f"\rFPS: {1 / (max(time() - iteration,0.000001))}", end="", flush=True)
+            print(
+                f"\rFPS: {1 / (max(time() - iteration, 0.000001))}", end="", flush=True
+            )
             iteration = time()
             monitor = {
-                "left": SCAN_PIXEL_LOCATION[0] - 6,
-                "top": SCAN_PIXEL_LOCATION[1],
+                "left": SCAN_PIXEL_LOCATION[0] - 6 + 20 + main_display["left"],
+                "top": SCAN_PIXEL_LOCATION[1] + main_display["top"],
                 "width": 10,
                 "height": 1,
             }
             im = np.array(sct.grab(monitor))
+            logger.debug(main_display)
+            logger.debug(monitor)
             # im = pyautogui.screenshot(
             #     region=(SCAN_PIXEL_LOCATION[0] - 6, SCAN_PIXEL_LOCATION[1], 10, 1)
             # )
@@ -282,6 +322,9 @@ if __name__ == "__main__":
                 im_color = "Yellow"
             if im_color:
                 last_fish_time = time()
+                # Option to deliboratly press wrong to stop flying fish from spawing
+                if ACTIVATE_BADFISH and random.randrange(BADFISH_CHANCE) == 0:
+                    im_color = "Green" if im_color == "Yellow" else "Yellow"
                 color_press(im_color)
                 logger.debug(f"Pressing: {im_color}Gr/Yl: {greens}/{yellows}")
                 continue
@@ -289,29 +332,40 @@ if __name__ == "__main__":
             if time() - last_fish_time > 20 and capture_hero(
                 pyautogui.screenshot(
                     region=(
-                        HERO_PORTRAIT[0],
-                        HERO_PORTRAIT[1],
+                        HERO_PORTRAIT[0] + main_display["left"],
+                        HERO_PORTRAIT[1] + main_display["top"],
                         HERO_PORTRAIT[2],
                         HERO_PORTRAIT[3],
                     )
                 )
             ):
                 logger.info("Hero died: " + str(datetime.now()))
-                goto_fishing_spot()
+                goto_fishing_spot(main_display)
+                continue
 
             if not empty_inventory_after_fish and not soft_pause:
                 if time() - last_fish_time > 3.5:
                     # Jumpt to fish again
-                    click_fish()
+                    click_fish(main_display)
             elif time() - last_fish_time > 10:
                 if empty_inventory_after_fish:
                     inventory_emptying_timer = time()
+                    # Transform inventory coordinates before calling functions
+                    transformed_item_slots = [
+                        get_screen_position(slot, main_display) for slot in ITEM_SLOTS
+                    ]
+                    transformed_hero_portrait_pos = get_screen_position(
+                        HERO_PORTRAIT[:2], main_display
+                    )
                     empty_inventory(
-                        ITEM_SLOTS[EMPTY_INVENTORY_FROM:4], HERO_PORTRAIT[:2]
+                        transformed_item_slots[EMPTY_INVENTORY_FROM:4],
+                        transformed_hero_portrait_pos,
                     )
                     move_inventory(
-                        ITEM_SLOTS[4:],
-                        ITEM_SLOTS[EMPTY_INVENTORY_FROM : EMPTY_INVENTORY_FROM + 1],
+                        transformed_item_slots[4:],
+                        transformed_item_slots[
+                            EMPTY_INVENTORY_FROM : EMPTY_INVENTORY_FROM + 1
+                        ],
                     )
                     empty_inventory_after_fish = False
                 elif soft_pause:
@@ -322,11 +376,16 @@ if __name__ == "__main__":
                 inventory_emptying_timer = time()
                 logger.info("[Timed] Clearing inventory: " + str(datetime.now()))
                 empty_inventory_after_fish = True
+                continue
 
-            if time() - inventory_full_check > 30:
+            if time() - inventory_full_check > 60:
                 inventory_full_check = time()
-                if full_inventory(ITEM_SLOTS[4:], COMPARES):
+                transformed_slots = [
+                    get_screen_position(slot, main_display) for slot in ITEM_SLOTS[4:]
+                ]
+                if full_inventory(transformed_slots, COMPARES):
                     empty_inventory_after_fish = True
+                    inventory_emptying_timer = time()
                     logger.info(
                         "[Inventory Full] Clearing inventory: " + str(datetime.now())
                     )

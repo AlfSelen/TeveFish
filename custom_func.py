@@ -128,7 +128,7 @@ def capture_position():
         while True:
             x, y = pyautogui.position()
             if local_key_state.is_pressed("e"):
-                print(x, y)
+                print(f"{x-1920}/{x}, {y-0}")
             time.sleep(0.1)
             if local_key_state.is_pressed("q"):
                 break
