@@ -35,6 +35,7 @@ Ingame setup:
 Run the program:
 - Run run.bat (you can run it by double clicking on it in the folder)
 Then program will start within 3 sec
+    If you have several monitors it will ask which one you have the game on
 Shift + P: Pause / Unpause program
 Shift + Q: Quit program
 
